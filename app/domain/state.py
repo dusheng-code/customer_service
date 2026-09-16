@@ -2,11 +2,72 @@
 @Author:du_sheng
 @Desc:
 """
+import time
+import uuid
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Dict
 
 from app.domain.contexts import TaskContext, SystemContext
-from app.domain.messages import UserMessage, BotMessage
+from app.domain.messages import UserMessage, BotMessage, ObjectTypeMessage
+
+
+#本轮对话对象
+@dataclass
+class Turn:
+    #本轮对话id
+    turn_id:str
+    #用户一个提问
+    user_message:UserMessage
+    #客服回答
+    bot_messages:list[BotMessage]
+
+    def to_dict(self) -> Dict[str,Any]:
+        return {
+            "turn_id":self.turn_id,
+            "user_message":self.user_message.to_dict(),
+            "bot_messages":[bot_message.to_dict()
+                            for bot_message in self.bot_messages]
+        }
+
+    @classmethod
+    def from_dict(cls,data:Dict[str,Any]) -> "Turn":
+        return cls(
+            turn_id=data['turn_id'],
+            user_message=UserMessage.from_dict(data['user_message']),
+            bot_messages=[BotMessage.from_dict(bot_msg_dict)
+                          for bot_msg_dict in data['bot_messages']]
+        )
+
+#会话对象
+@dataclass
+class Session:
+    #会话id
+    session_id:str
+    #会话开始时间
+    started_at:float
+    #最后一次活跃时间戳
+    last_activity_at:float
+    #关闭会话时间戳
+    closed_at:float | None = None
+    #多轮对话
+    turns:list[Turn]=field(default_factory=list)
+    def to_dict(self)->Dict[str,Any]:
+        return {
+            "session_id":self.session_id,
+            "started_at":self.started_at,
+            "last_activity_at":self.last_activity_at,
+            "closed_at":self.closed_at,
+            "turns":[turn.to_dict() for turn in self.turns]
+        }
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "Session":
+        return cls(
+            session_id=data['session_id'],
+            started_at=data['started_at'],
+            last_activity_at=data['last_activity_at'],
+            closed_at=data['closed_at'],
+            turns=[Turn.from_dict(turn) for turn in data['turns']],
+        )
 
 @dataclass
 class FocusedObject:
@@ -118,36 +179,51 @@ class DialogueState:
             pending_turn=Turn.from_dict(data["pending_turn"]) if data["pending_turn"] else None
         )
 
-    def start_system_task(self,system_context:SystemContext):
-        '''
-        启动系统任务
-        :param system_context:
-        :return:
-        '''
-        self.active_system_task=system_context
+    #---------任务相关的--------
+    # 开始任务
+    def start_task(self, task: TaskContext):
+        self.active_task = task
+
+    # 结束任务
+    def end_active_task(self):
+        self.active_task = None
+
+    # 取消任务
+    def cancel_active_task(self):
+        self.active_task = None
+        self.active_system_task = None
+
+    # 中断任务
+    def interrupt_active_task(self, task: TaskContext):
+        # 把任务放到中断列表  追加
+        self.paused_tasks.append(task)
+        # 把active_task空
+        self.active_task = None
+
+    # 恢复任务
+    def resume_task(self,flow_id: str)->bool:
+
+        if not self.paused_tasks:
+            return False
+
+        # 从paused_tasks获取所有中断任务
+        for task in self.paused_tasks:
+            # 找到和flow_id相同中断任务
+            if task.flow_id == flow_id:
+                # 找到之后，active_task设置任务
+                self.active_task = task
+                # 从中断列表删除任务
+                self.paused_tasks.remove(task)
+                return True
+        return False
+
+    # 系统任务开始和结束
+    def start_system_task(self, system_context: SystemContext):
+        self.active_system_task = system_context
 
     def end_system_task(self):
-        '''
-        关闭当前的系统任务
-        :return:
-        '''
-        self.active_system_task=None
+        self.active_system_task = None
 
-    def interrupt_active_task(self):
-        '''
-        中断当前任务
-        :return:
-        '''
-        self.paused_tasks.append(self.active_task)
-        self.active_task=None
-
-    def start_task(self,task_context:TaskContext):
-        '''
-        启动任务
-        :param task_context:
-        :return:
-        '''
-        self.active_task=task_context
 
     def set_slots(self,slots:dict[str,Any]):
         '''
@@ -157,29 +233,69 @@ class DialogueState:
         '''
         self.active_task.slots.update(slots)
 
-    def cancel_active_task(self):
-        self.active_task = None
-        self.active_system_task= None
+    def remove_slot(self,slot_name:str):
+        self.active_task.slots.pop(slot_name)
 
-    def resume_task(self,flow_id:str):
-        for task in self.paused_tasks:
-            if task.flow_id == flow_id:
-                self.active_task=task
-                self.paused_tasks.remove(task)
-                break
+    # --------------当前信息（当前任务、当前session）--------------------------
+    # 当前正在执行的任务（系统流程、业务任务）
+    def current_active_task(self):
+        # 先获取系统流程 如果获取不到 获取业务任务
+        return self.active_system_task or self.active_task
 
+    # 返回当前session
     def current_session(self)->Session | None:
         for session in self.sessions:
             if session.session_id == self.current_session_id:
                 return session
         return None
 
-    def current_task(self):
-        return self.active_system_task or self.active_task
+#session相关的
+    def start_session(self):
+        if self.current_session() is None:
+            now=time.time()
+            session=Session(
+                session_id=str(uuid.uuid4()),
+                started_at=now,
+                last_activity_at=now)
+            self.sessions.append(session)
+            self.current_session_id=session.session_id
 
-    def remove_slot(self,slot_name:str):
-        self.active_task.slots.pop(slot_name)
+    def close_session(self):
+        if self.current_session() is None:
+            #1.修改session的时间closed_at
+            self.current_session().closed_at=time.time()
+            #2.清空当前的session_id
+            self.current_session_id=None
 
-    def end_active_task(self):
+######################################################################################################################
+######################################################################################################################
+    def reset_running_state_for_new_session(self):
+        '''
+        session会话超时
+        :return:
+        '''
         self.active_task=None
+        self.active_system_task=None
+        self.paused_tasks=[]
+        self.focused_object=None
+        self.pending_turn=None
+        self.current_session_id=None
+
+    #------------------turn相关的------------------------
+    def begin_turn(self, message: UserMessage):
+        if self.current_session():
+            turn = Turn(turn_id=str(uuid.uuid4()),
+                        user_message=message,bot_messages=[])
+            self.pending_turn = turn
+
+
+    def commit_turn(self):
+        if self.current_session():
+            self.current_session().turns.append(self.pending_turn)
+            self.pending_turn = None
+
+    #-----------------FocusedObject相关的---------------
+    def set_focused_object(self,focused_object:ObjectTypeMessage):
+        self.focused_object = focused_object
+
 

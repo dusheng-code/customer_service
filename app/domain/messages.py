@@ -12,7 +12,7 @@ class MessageType(Enum):
     OBJECT = "object"
 
 @dataclass
-class MessageObject:
+class ObjectTypeMessage:
     type:str
     id:str
     title:str | None=None
@@ -26,7 +26,7 @@ class MessageObject:
             "attributes":self.attributes
         }
     @classmethod
-    def from_dict(cls,data:dict[str,Any])->"MessageObject":
+    def from_dict(cls,data:dict[str,Any])->"ObjectTypeMessage":
         return cls(
             type=data["type"],
             id=data["id"],
@@ -40,7 +40,7 @@ class UserMessage:
     message_id: str
     type: MessageType
     text: str | None = None
-    object: MessageObject | None = None
+    object: ObjectTypeMessage | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -58,14 +58,14 @@ class UserMessage:
             message_id=data["message_id"],
             type=MessageType(data["type"]),
             text=data["text"],
-            object=MessageObject.from_dict(data["object"]) if data["object"] else None,
+            object=ObjectTypeMessage.from_dict(data["object"]) if data["object"] else None,
         )
 
 
 @dataclass
 class BotMessage:
     text: str | None = None
-    object: MessageObject | None = None
+    object: ObjectTypeMessage | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -77,7 +77,7 @@ class BotMessage:
     def from_dict(cls, data: dict[str, Any]) -> "BotMessage":
         return cls(
             text=data["text"],
-            object=MessageObject.from_dict(data["object"]) if data["object"] else None,
+            object=ObjectTypeMessage.from_dict(data["object"]) if data["object"] else None,
         )
 
 
