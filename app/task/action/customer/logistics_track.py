@@ -1,0 +1,47 @@
+"""
+@Author:du_sheng
+@Desc:
+"""
+from typing import Any
+
+from app.domain.state import DialogueState
+from app.task.action.base import Action, ActionResult
+from app.task.action.customer.shared import get_logistics
+
+#自定义action:根据订单id查询物流信息
+class LogisticsAction(Action):
+    name = "action_lookup_logistics"
+    async def run(
+            self,
+            state:DialogueState,
+            action_kwargs:dict[str,Any]
+    ) -> ActionResult:
+        #获取订单id
+        order_id=state.active_task.slots.get('order_number')
+        #判断
+        if order_id is None:
+            return ActionResult(
+                slot_updates={
+                    "logistics_company":"未知",
+                    "tracking_number":"未知",
+                    "status":"暂无物流信息"
+                }
+            )
+        #调用
+        logistics_data = await get_logistics(order_id)
+        #判断
+        if logistics_data is None:
+            return ActionResult(
+                slot_updates={
+                    "logistics_company":"未知",
+                    "tracking_number":"未知",
+                    "status":"暂无物流消息"
+                }
+            )
+        return ActionResult(
+            slot_updates={
+                "logistics_company":logistics_data.get("logistics_company"),
+                "tracking_number":logistics_data.get("tracking_number"),
+                "status":logistics_data.get("status")
+            }
+        )

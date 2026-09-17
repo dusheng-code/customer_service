@@ -194,17 +194,22 @@ class DialogueState:
         self.active_system_task = None
 
     # 中断任务
-    def interrupt_active_task(self, task: TaskContext):
+    def interrupt_active_task(self):
         # 把任务放到中断列表  追加
-        self.paused_tasks.append(task)
+        self.paused_tasks.append(self.active_task)
         # 把active_task空
         self.active_task = None
 
     # 恢复任务
-    def resume_task(self,flow_id: str)->bool:
+    def resume_task(self,flow_id: str=None)->bool:
 
         if not self.paused_tasks:
             return False
+
+        if flow_id is None:
+            task=self.paused_tasks.pop()
+            self.active_task = task
+            return True
 
         # 从paused_tasks获取所有中断任务
         for task in self.paused_tasks:

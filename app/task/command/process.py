@@ -222,5 +222,77 @@ class CommandProcessor:
             started_flow_name=flow.name
         )
 
-    def _handle_resume_task(self):
-        pass
+    #恢复任务流程
+    #{“command”:"resume_task","flow":"refund_request"}
+    def _handle_resume_task(self,
+            state:DialogueState,flow_list:FlowsList,
+            command:ResumeFlowCommand):
+        #1 校验command.flow流程id
+        ##command.flow不为空
+        if command.flow is not None:
+            #根据流程id查询是否存在flowslist
+            target_flow = flow_list.get_flow_by_id(command.flow)
+            if target_flow is None:
+                raise ValueError("流程不存在")
+            #记录流程id和名称,后面使用
+            target_flow_id = target_flow.id
+            target_flow_name = target_flow.name
+        else:#command为空的情况
+            #从中断任务列表获取最新任务
+            if not state.paused_tasks:
+                return
+            #从中断任务列表获取最新放的任务
+            top_task = state.paused_tasks[-1]
+            #记录流程id和名称，后面使用
+            target_flow_id = top_task.flow_id
+            target_flow=flow_list.get_flow_by_id(target_flow_id)
+            target_flow_name = target_flow.name
+
+        # 2 获取当前活跃任务
+        active_task = state.active_task
+        #2.1活跃任务存在
+        if active_task is not None:
+            #要恢复的流程 是否 当前活跃流程
+            #（1）相等
+            if active_task.flow_id == target_flow_id:
+                return
+            # (2) 不相等
+            # 把当前活跃任务中断
+            state.interrupt_active_task()
+            #记录当前中断流程id 和 名称
+            interrupted_flow_id = active_task.flow_id
+            flow = flow_list.get_flow_by_id(interrupted_flow_id)
+            interrupted_flow_name = flow.name
+
+            #尝试恢复任务target_flow_id
+            ##恢复失败
+            if not state.resume_task(flow_id=target_flow_id):
+                #回滚
+                state.resume_task()
+                return
+            ##恢复成功
+            #设置为新的active_task,在resume_task实现了
+            #激活系统任务
+            self._activate_interrupted_system_task(
+                state,flow_list,
+                interrupted_flow_id=interrupted_flow_id,
+                interrupted_flow_name=interrupted_flow_name,
+                started_flow_id=target_flow_id,
+                started_flow_name=target_flow_name
+            )
+        #2.2 活跃任务不存在
+        else:
+            #尝试恢复任务target_flow_id
+            ##恢复失败
+            if not state.resume_task(flow_id=target_flow_id):
+                return
+            resumed = state.active_task
+            flow = flow_list.get_flow_by_id(resumed.flow_id)
+            #激活系统任务
+            self._active_resumed_system_flow(
+                state,flow_list,
+                resumed_flow_id=resumed.flow_id,
+                resumed_flow_name=flow.name
+            )
+
+
