@@ -1,152 +1,200 @@
 from dataclasses import asdict
+from typing import List
 
 from app.domain.contexts import CollectSystemContext
 from app.domain.messages import BotMessage
 from app.domain.state import DialogueState
 from app.task.action.base import ActionResult
 from app.task.action.runner import ActionCall, ActionRunner
+from app.task.command.models import Command
 from app.task.flow.links import FlowStepLink, StaticLink, ConditionalLink, FallbackLink
 from app.task.flow.models import FlowsList, Flow
 from app.task.flow.steps import FlowStep, StartFlowStep, EndFlowStep, CollectSlotStep, ActionFlowStep
 
 
+#推进流程里面步骤实现
 class FlowExecutor:
-
-    async def run_task(self, state: DialogueState, flows: FlowsList, action_runner: ActionRunner) -> list[BotMessage]:
-        messages: list[BotMessage] = []
+    async  def run_task(self,state:DialogueState,
+                        commands:List[Command],
+                        flow_list:FlowsList,
+                        action_runner:ActionRunner)->List[BotMessage]:
+        #定义变量 封装最终数据
+        final_messages:List[BotMessage] = []
+        #外层循环: 处理步骤的action调用过程
         while True:
-            action_call: ActionCall = self.advance_until_action(state, flows)
-            if action_call.action_name == "action_listen":
+            #在步骤执行过程中，遇到step是action类型，
+            #封装ActionCall对象，返回外循环，执行action
+            action_call:ActionCall = self.advance_until_action(state,flow_list)
+            #特殊类型action
+            if action_call.action_name=="action_listen":
                 break
             else:
-                action_result: ActionResult = await action_runner.run(action_call, state)
+                action_result:ActionResult = await (
+                    action_runner.run(action_call,state))
                 state.set_slots(action_result.slot_updates)
-                messages.extend(action_result.messages)
-        return messages
-
-    def advance_until_action(self, state: DialogueState, flows: FlowsList) -> ActionCall:
+                final_messages.extend(action_result.messages)
+        return final_messages
+    def advance_until_action(self,state:DialogueState,
+                             flow_list:FlowsList)->ActionCall:
+        #内层循环 步骤推进过程
         while True:
-            current_task = state.current_task()  # 系统任务优先
-            if current_task is None:
+            #1 获取当前运行任务
+            current_active_task = state.current_active_task()
+            #2 判断 current_active_task为空
+            if current_active_task is None:
                 return ActionCall(action_name="action_listen")
+            #current_active_task 不为空
+            #获取流程里面步骤id
+            flow_id = current_active_task.flow_id
+            flow=flow_list.get_flow_by_id(flow_id)
+            step = flow.get_step_by_id(current_active_task.step_id)
 
-            flow: Flow = flows.get_flow_by_id(current_task.flow_id)
-            step: FlowStep = flow.get_step_by_id(current_task.step_id)
-            step_result: ActionCall | None = self._run_step(step, state, flows)
+            #开始推进
+            action_call:ActionCall = self._run_step(state,step,flow_list)
+            if action_call is not None:
+                return action_call
 
-            if step_result is not None:
-                return step_result
-
-    def _run_step(self, step: FlowStep, state: DialogueState, flows: FlowsList) -> ActionCall | None:
-        if isinstance(step, StartFlowStep):
-            return self._run_start_step(step, state)
-        if isinstance(step, EndFlowStep):
+    #开始推进
+    def _run_step(self,state:DialogueState,
+                  step:FlowStep,flow_list:FlowsList)->ActionCall:
+        #因为step步骤类型不同的，每个类型步骤做的事情不同的
+        if isinstance(step,StartFlowStep):
+            return self._run_start_step(state,step)
+        if isinstance(step,CollectSlotStep):
+            return self._run_collect_step(state,step,flow_list)
+        if isinstance(step,EndFlowStep):
             return self._run_end_step(state)
-        if isinstance(step, CollectSlotStep):
-            return self._run_collect_step(step, state, flows)
-        if isinstance(step, ActionFlowStep):
-            return self._run_action_step(step, state)
+        if isinstance(step,ActionFlowStep):
+            return self._run_action_step(state,step)
 
-    def _run_start_step(self, step: StartFlowStep, state: DialogueState) -> ActionCall | None:
-        self._advance_to_next_step(step, state)
+    def _run_start_step(self,state:DialogueState,step:FlowStep)->None:
+        self._advance_next_step(state,step)
         return None
 
-    def _run_end_step(self, state: DialogueState) -> ActionCall | None:
+    def _advance_next_step(self,state:DialogueState,step:FlowStep)->None:
+        #获取当前步骤的next值,设置当前执行步骤id
+        #获取当前步骤的next值
+        next_step_id = self._select_next_step(state,step)
+        #设置当前执行步骤id
+        state.current_active_task().step_id=next_step_id
+
+    def _select_next_step(self,state:DialogueState,step:FlowStep)->str:
+        for link in step.next:
+            #如果next值字符串,表示无条件跳转
+            if isinstance(link,StaticLink):
+                return link.target
+
+            if isinstance(link,ConditionalLink):
+                #条件判断，如果成立
+                if self._select_condition(state,link.condition):
+                    return link.target
+            if isinstance(link,FallbackLink):
+                return link.target
+        return "next not exist"
+
+    def _select_condition(self,state:DialogueState,condition:str)->bool:
+        data={
+            "slots":state.active_task.slots,
+            "context":asdict(state.current_active_task())
+        }
+        return bool(eval(condition,{},data))
+
+    #2 step类型 end 结束
+    def _run_end_step(self,state:DialogueState)->None:
         if state.active_system_task:
             state.end_system_task()
-            return None
         else:
             state.end_active_task()
-            return None
+        return None
 
-    def _run_collect_step(self, step: CollectSlotStep, state: DialogueState, flows: FlowsList) -> ActionCall | None:
-        self._try_to_fill_slot_from_focused_object(step, state)
+    #3 step类型action
+    def _run_action_step(self,
+                         state:DialogueState,
+                         step:FlowStep)->ActionCall:
+        #步骤推进
+        self._advance_next_step(state,step)
+        #内层步骤类型action时候，封装ActionCall,包含action名称和参数，返回ActionCall
+        #在外层循环得到返回ActionCall,根据名称得到action对象，调用
+        return self._build_actino_call(state,step)
+
+    def _build_action_call(self,state:DialogueState,step:ActionFlowStep)->ActionCall:
+        action_name=step.action
+        action_args=step.args
+        if isinstance(action_args,str):
+            action_args = [action_args.split('.')[1]]
+        return ActionCall(action_name=action_name,action_kwargs=action_args)
+
+    #4 step类型 collect
+    def _run_collect_step(self,state:DialogueState,
+                          step:CollectSlotStep,
+                          flow_list:FlowsList):
+        #1 如果消息是对象类型,从对象类型获取槽位数据，设置到state里面
+        self._fill_to_slots_data(state,step)
+        #2 如果槽位数据存在
         if state.active_task.slots.get(step.slot_name):
-            # 有值
+            #2.1 进一步判断，是否有validation属性
             if step.validation:
-                # 校验
-                condition = step.validation.condition
-                if self._eval_condition(condition, state):
-                    # 校验通过
-                    self._advance_to_next_step(step, state)
+                ##2.1.1 如果有validation,判断条件是否成立，如果成立
+                if self._select_condition(step.validation.condition,state):
+                    ### 推进next步骤
+                    self._advance_next_step(state,step)
                     return None
-                else:
-                    # 校验失败
-                    state.remove_slot(step.slot_name)
+                else: #条件不成立，返回消息
                     if step.validation.failure_response:
-                        # 失败响应
-                        return ActionCall(action_name="action_response",
-                                          action_kwargs=asdict(step.validation.failure_response))
+                        return ActionCall(
+                            action_name="action_response",
+                            action_kwargs=asdict(step.validation.failure_response)
+                        )
                     else:
-                        # 无响应
-                        return None
-            else:
-                # 无需校验
-                self._advance_to_next_step(step, state)
+                        return ActionCall(
+                            action_name="action_response",
+                            action_kwargs={
+                                "mode":"static",
+                                "text":"订单号不能为空"
+                            }
+                        )
+            else: #没有validation属性
+                #直接推进
+                self._advance_next_step(state,step)
                 return None
+
+        #3 没有槽位数据
         else:
-            # 无值, 激活系统collect flow
+            ##开启系统流程
             state.start_system_task(CollectSystemContext(
                 flow_id="system_collect_information",
-                step_id=flows.get_flow_by_id("system_collect_information").start_step().id,
+                step_id=
+                flow_list.get_flow_by_id("system_collect_information").start_step().id,
                 slot_name=step.slot_name,
                 response=asdict(step.response)
             ))
-            return None
-
-    def _run_action_step(self, step: ActionFlowStep, state: DialogueState) -> ActionCall | None:
-        # 推进到下一个step
-        self._advance_to_next_step(step, state)
-        # 封装ActionCall
-        action_call: ActionCall = self._build_action_call(step, state)
-        return action_call
-
-    def _select_next_step(self, step: FlowStep, state: DialogueState) -> str:
-        """
-        选择下一个step_id
-        :param step:
-        :param state:
-        :return: next step id
-        """
-        links: list[FlowStepLink] = step.next
-        for link in links:
-            if isinstance(link, StaticLink):
-                return link.target
-            if isinstance(link, ConditionalLink):
-                if self._eval_condition(link.condition, state):
-                    return link.target
-            if isinstance(link, FallbackLink):
-                return link.target
-
-    def _eval_condition(self, condition: str, state: DialogueState) -> bool:
-        data = {
-            "slots": state.active_task.slots,
-            "context": asdict(state.current_task())
-        }
-        return bool(eval(condition, {}, data))
-
-    def _advance_to_next_step(self, step: FlowStep, state: DialogueState):
-        # 选择下一个step
-        next_step_id = self._select_next_step(step, state)
-        # 设置state的当前的task的step_id
-        state.current_task().step_id = next_step_id
-
-    def _build_action_call(self, step: ActionFlowStep, state: DialogueState) -> ActionCall:
-        action_name = step.action
-        args = step.args
-        if isinstance(args, str):
-            args = asdict(state.current_task())[args.split('.')[1]]
-        return ActionCall(action_name=action_name, action_kwargs=args)
-
-    def _try_to_fill_slot_from_focused_object(self, step: CollectSlotStep, state: DialogueState):
+    def _fill_to_slots_data(self,state:DialogueState,step:CollectSlotStep)->None:
         if state.focused_object is None:
-            return
-        if step.slot_name == 'order_number' and state.focused_object.type == "order":
-            state.set_slots({step.slot_name: state.focused_object.id})
-        if step.slot_name == "product_id" and state.focused_object.type == "product":
-            state.set_slots({step.slot_name: state.focused_object.id})
+            return None
+        #因为只有两种类型对象:order订单 和  product商品类型
+        if (step.slot_name=="order_number"
+             and state.focused_object.type == "order"):
+            #从对象类型消息获取id值，设置到槽
+            #  {"order_number":a1001}
+            state.set_slots({step.slot_name:state.focused_object.id})
 
+        if (step.slot_name=="product_id"
+                and state.focused_object.type=="product"):
+            state.set_slots({step.slot_name:state.focused_object.id})
 
-if __name__ == '__main__':
-    f = "a>b"
-    print(eval(f, {}, {"a": 1, "b": 2}))
+if __name__ == "__main__":
+    # next:
+    # - if: "slots.get('product_id')"  # 有商品就推荐
+    #     then: respond
+    # - else: missing_product_context
+    conditon = "slots.get('product_id')=='aaa'"
+
+    # 数据
+    data = {
+        "slots":{
+            "product_id":"aaa1",
+        }
+    }
+
+    flag = bool(eval(conditon,{},data))
+    print(flag)
