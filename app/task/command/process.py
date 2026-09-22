@@ -29,7 +29,7 @@ class CommandProcessor:
             self._handle_cancel_flow(state, flows_list)
 
         elif isinstance(command, ResumeFlowCommand):
-            self._handle_resume_task(command, state, flows_list)
+            self._handle_resume_task(state, flows_list,command)
         else:
             pass
 
@@ -155,14 +155,15 @@ class CommandProcessor:
                 # 不需要重复启动，继续运行
                 return
 
-            # 子分支A2：活跃任务 ≠ 本次要启动的流程（流程抢占场景）
-            # 1） 中断当前正运行的任务
-            state.interrupt_active_task()
-
-            # 获取当前active_task流程id和名称
+            # todo 修改位置，先赋值，否则先中断interrupt_active_task()，active_task为空了
+            #获取当前active_task流程id和名称
             interrupted_flow_id = active_task.flow_id
             flow = flows_list.get_flow_by_id(interrupted_flow_id)
             interrupted_flow_name = flow.name
+
+            # 子分支A2：活跃任务 ≠ 本次要启动的流程（流程抢占场景）
+            # 1） 中断当前正运行的任务
+            state.interrupt_active_task()
 
             # 2） 判断当前新开启任务是否之前中断过
             # 中断任务列表 --不存在--当前要开启任务

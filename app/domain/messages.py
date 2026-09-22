@@ -4,7 +4,7 @@
 """
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import Dict,Any, Literal
 
 #Enum枚举
 class MessageType(Enum):
@@ -86,3 +86,10 @@ class ProcessResult:
     sender_id: str
     message_id: str
     messages: list[BotMessage]
+
+@dataclass(slots=True)
+class ChatHistoryMessage:
+    session_id: str
+    role: Literal["user", "bot"]
+    text: str | None = None
+    object: ObjectTypeMessage | None = None

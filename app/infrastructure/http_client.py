@@ -14,6 +14,10 @@ def init_http_client():
     global http_client
     http_client = AsyncClient(timeout=10.0)
 
+def get_http_client()->AsyncClient:
+    global http_client
+    return http_client
+
 
 async def close_http_client():
     await http_client.aclose()

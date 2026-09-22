@@ -115,13 +115,13 @@ class FlowExecutor:
         self._advance_next_step(state,step)
         #内层步骤类型action时候，封装ActionCall,包含action名称和参数，返回ActionCall
         #在外层循环得到返回ActionCall,根据名称得到action对象，调用
-        return self._build_actino_call(state,step)
+        return self._build_action_call(state,step)
 
     def _build_action_call(self,state:DialogueState,step:ActionFlowStep)->ActionCall:
         action_name=step.action
         action_args=step.args
         if isinstance(action_args,str):
-            action_args = [action_args.split('.')[1]]
+            action_args = asdict(state.active_system_task)[action_args.split('.')[1]]
         return ActionCall(action_name=action_name,action_kwargs=action_args)
 
     #4 step类型 collect

@@ -6,13 +6,14 @@ from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import PromptTemplate
 
 from app.domain.state import DialogueState
-from app.engine.dialogue_engine import DialogueEngine
+# from app.engine.dialogue_engine import DialogueEngine
 from app.infrastructure.llm import llm
 from app.plan import turn_plan
 from app.plan.turn_plan import TurnPlan
 from app.prompts.history_builder import HistoryBuilder
 from app.prompts.loader import load_prompt
 from app.task.flow.models import FlowsList
+from app.knowledge.intents import KNOWLEDGE_INTENTS
 
 # 本轮执行计划
 class TurnPlanner:
@@ -33,7 +34,7 @@ class TurnPlanner:
         prompt_template_text = load_prompt("turn_plan")
         prompt_template = PromptTemplate.from_template(
                             template=prompt_template_text,
-                            template_format="jinjia2"
+                            template_format="jinja2"
                             )
         chain = prompt_template | llm | JsonOutputParser()
         response:Dict[str,Any] = await chain.ainvoke(input_prompt)
@@ -50,9 +51,9 @@ class TurnPlanner:
                 state.current_session().turns[-10:]
         )
         #3 focused_object_json
-        focused_object_json = json.dumps(state.focused_object.to_dict())
+        focused_object_json = json.dumps(state.focused_object.to_dict() if state.focused_object is not None  else None,ensure_ascii=False)
         #4 active_task_json
-        active_task_json = json.dumps(state.active_task.to_dict(),ensure_ascii=False)
+        active_task_json = json.dumps(state.active_task.to_dict() if state.active_task is not None  else None,ensure_ascii=False)
         #5 interrupted_tasks_json
         interrupted_tasks_json = json.dumps(
             [
@@ -69,11 +70,21 @@ class TurnPlanner:
                         for flow in flow_list.flows]},ensure_ascii=False
         )
 
+        #7 可用知识意图（喂给模型，避免其编造不存在的 intent）
+        knowledge_intents_json = json.dumps(
+            [
+                {"id": intent_id, "description": intent.description}
+                for intent_id, intent in KNOWLEDGE_INTENTS.items()
+            ],
+            ensure_ascii=False,
+        )
+
         return {
             "user_message": user_message,
             "current_conversation": current_conversation,
             "active_task_json": active_task_json,
             "interrupted_tasks_json": interrupted_tasks_json,
             "focused_object_json": focused_object_json,
-            "available_flows_json": available_flows_json
+            "available_flows_json": available_flows_json,
+            "knowledge_intents_json":knowledge_intents_json
         }

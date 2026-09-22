@@ -35,7 +35,7 @@ def register_customer_action(action_runner:ActionRunner):
         module = importlib.import_module(module_name)
         #遍历
         for _,obj in inspect.getmembers(module,inspect.isclass):
-            if not issubclass(obj,Action):
+            if not issubclass(obj,Action) or inspect.isabstract(obj):
                 continue
             #把action类注册
             action_runner.actionRegistry.registerAction(obj())

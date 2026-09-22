@@ -4,6 +4,17 @@ from app.clarify.responder import ClarifyResponder
 from app.engine.dialogue_engine import DialogueEngine
 from app.plan.turn_planner import TurnPlanner
 from app.plan.validator import TurnPlanValidator
+from app.chitchat.handler import ChitChatHandler
+from app.knowledge.handler import KnowLedgeHandler
+from app.knowledge.intents import KNOWLEDGE_INTENTS
+from app.knowledge.provider import (
+    ProductAPIProvider,
+    OrderAPIProvider,
+    FAQProvider,
+    RAGProvider,
+)
+from app.knowledge.registry import KnowledgeProviderRegistry
+from app.knowledge.responder import KnowledgeResponder
 from app.task.action.builder import build_action_runner
 from app.task.command.process import CommandProcessor
 from app.task.flow.executor import FlowExecutor
@@ -31,9 +42,20 @@ def build_dialogue_engine():
 
     return DialogueEngine(
         turn_planner=TurnPlanner(),
-        turn_validator=TurnPlanValidator(),
+        turn_plan_validator=TurnPlanValidator(),
         clarify_responder=ClarifyResponder(),
-        task_handler=TaskHandler(flows=flow_list,
+        chitchat_handler=ChitChatHandler(),
+        knowledge_handler=KnowLedgeHandler(
+            knowledge_intents=KNOWLEDGE_INTENTS,
+            provider_registry=KnowledgeProviderRegistry([
+                ProductAPIProvider(),
+                OrderAPIProvider(),
+                FAQProvider(),
+                RAGProvider(),
+            ]),
+            knowledge_responder=KnowledgeResponder(),
+        ),
+        task_handler=TaskHandler(flow_list=flow_list,
                processor=CommandProcessor(),
             action_runner=build_action_runner(),
              flow_executor=FlowExecutor()))

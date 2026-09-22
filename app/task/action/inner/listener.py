@@ -11,6 +11,6 @@ from app.task.action.base import Action, ActionResult
 class ActionListen(Action):
     name = "action_listen"
 
-    def run(self,state,
+    async def run(self,state,
             action_kwargs:dict[str,Any])->ActionResult:
         pass

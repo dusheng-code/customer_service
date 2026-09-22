@@ -33,3 +33,7 @@ class HistoryMessage(BaseModel):
 class HistoryResponse(BaseModel):
     sender_id:str
     messages:list[HistoryMessage]
+
+
+class ChatMessageResponse:
+    pass

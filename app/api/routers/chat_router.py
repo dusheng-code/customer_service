@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends
 
 from app.api.dependencies import get_dialogue_service
 from app.api.schemas import ChatRequest, ChatResponse, ChatBotMessage, ChatObject, HistoryResponse, HistoryMessage
-from app.domain.messages import UserMessage, ProcessResult, MessageType, MessageObject
+from app.domain.messages import UserMessage, ProcessResult, MessageType, ObjectTypeMessage
 from app.service.dialogue_service import DialogueService
 
 chat_router=APIRouter()
@@ -19,10 +19,10 @@ def _build_user_message(chat_request:ChatRequest)->UserMessage:
         message_id=chat_request.message_id or str(uuid.uuid4()),
         type=MessageType.TEXT if chat_request.text else MessageType.OBJECT,
         text=chat_request.text,
-        object=MessageObject(
+        object=ObjectTypeMessage(
             type=chat_request.object.type,
             id=chat_request.object.id,
-            title=chat_request.object.id,
+            title=chat_request.object.title,
             attributes=chat_request.object.attributes
         ) if chat_request.object else None
     )

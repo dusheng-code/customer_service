@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
 const senderId = ref('u1001')
@@ -952,57 +952,57 @@ async function copyBotText(botMsg) {
 
 :global(:root) {
   /* ── Palette ── */
-  --color-bg-deep: #070a14;
-  --color-bg-mid: #0c1024;
-  --color-bg-surface: #11162b;
-  /* Dark frosted glass — emerges from background, doesn't sit on top */
-  --color-surface: rgba(14, 16, 30, 0.78);
-  --color-surface-hover: rgba(20, 22, 38, 0.86);
-  --color-surface-dim: rgba(14, 16, 30, 0.60);
-  --color-surface-raised: rgba(24, 26, 44, 0.70);
-  --color-surface-field: rgba(10, 12, 22, 0.62);
-  /* Light text on dark surfaces */
-  --color-text-primary: #e6e3dc;
-  --color-text-secondary: #9b9790;
-  --color-text-muted: #726f68;
-  --color-text-inverse: #18171c;
-  /* Accent — teal */
-  --color-accent: #2dd4bf;
-  --color-accent-strong: #14b8a6;
-  --color-accent-soft: rgba(45, 212, 191, 0.10);
-  --color-accent-glow: rgba(45, 212, 191, 0.20);
-  --color-accent-soft-bg: rgba(45, 212, 191, 0.06);
+  --color-bg-deep: #eef3f9;
+  --color-bg-mid: #e7eef7;
+  --color-bg-surface: #f7fafc;
+  /* Light frosted glass — white panels floating on a soft gradient */
+  --color-surface: rgba(255, 255, 255, 0.72);
+  --color-surface-hover: rgba(255, 255, 255, 0.88);
+  --color-surface-dim: rgba(255, 255, 255, 0.55);
+  --color-surface-raised: rgba(255, 255, 255, 0.85);
+  --color-surface-field: rgba(248, 250, 252, 0.92);
+  /* Dark text on light surfaces */
+  --color-text-primary: #1e293b;
+  --color-text-secondary: #64748b;
+  --color-text-muted: #94a3b8;
+  --color-text-inverse: #f8fafc;
+  /* Accent — teal (darkened for light-bg contrast) */
+  --color-accent: #0d9488;
+  --color-accent-strong: #0f766e;
+  --color-accent-soft: rgba(13, 148, 136, 0.12);
+  --color-accent-glow: rgba(13, 148, 136, 0.18);
+  --color-accent-soft-bg: rgba(13, 148, 136, 0.06);
   /* Warm — amber */
-  --color-warm: #f59e0b;
-  --color-warm-strong: #d97706;
-  --color-warm-soft: rgba(245, 158, 11, 0.10);
-  --color-warm-glow: rgba(245, 158, 11, 0.18);
-  --color-warm-soft-bg: rgba(245, 158, 11, 0.05);
+  --color-warm: #d97706;
+  --color-warm-strong: #b45309;
+  --color-warm-soft: rgba(217, 119, 6, 0.12);
+  --color-warm-glow: rgba(217, 119, 6, 0.16);
+  --color-warm-soft-bg: rgba(217, 119, 6, 0.06);
   /* Semantic */
-  --color-success: #34d399;
-  --color-success-soft: rgba(52, 211, 153, 0.12);
-  --color-info: #38bdf8;
-  --color-info-soft: rgba(56, 189, 248, 0.10);
-  --color-danger: #fb7185;
-  --color-danger-soft: rgba(251, 113, 133, 0.10);
-  /* Borders — subtle light lines on dark glass */
-  --color-border: rgba(255, 255, 255, 0.08);
-  --color-border-light: rgba(255, 255, 255, 0.05);
-  --color-border-strong: rgba(255, 255, 255, 0.13);
+  --color-success: #059669;
+  --color-success-soft: rgba(5, 150, 105, 0.12);
+  --color-info: #0284c7;
+  --color-info-soft: rgba(2, 132, 199, 0.12);
+  --color-danger: #e11d48;
+  --color-danger-soft: rgba(225, 29, 72, 0.10);
+  /* Borders — subtle dark lines on light surfaces */
+  --color-border: rgba(15, 23, 42, 0.08);
+  --color-border-light: rgba(15, 23, 42, 0.05);
+  --color-border-strong: rgba(15, 23, 42, 0.14);
   /* ── Radii ── */
   --radius-sm: 10px;
   --radius-md: 16px;
   --radius-lg: 24px;
   --radius-xl: 28px;
   --radius-full: 9999px;
-  /* ── Shadows (glow-based for dark theme) ── */
-  --shadow-xs: 0 1px 3px rgba(0, 0, 0, 0.18);
-  --shadow-sm: 0 4px 14px rgba(0, 0, 0, 0.22);
-  --shadow-md: 0 8px 32px rgba(0, 0, 0, 0.28);
-  --shadow-lg: 0 20px 56px rgba(0, 0, 0, 0.35);
-  --shadow-glow-teal: 0 0 60px rgba(45, 212, 191, 0.10), 0 0 120px rgba(45, 212, 191, 0.04);
-  --shadow-glow-amber: 0 0 50px rgba(245, 158, 11, 0.08), 0 0 100px rgba(245, 158, 11, 0.03);
-  --shadow-inner-glow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  /* ── Shadows (soft elevation for light theme) ── */
+  --shadow-xs: 0 1px 3px rgba(15, 23, 42, 0.06);
+  --shadow-sm: 0 4px 14px rgba(15, 23, 42, 0.08);
+  --shadow-md: 0 8px 32px rgba(15, 23, 42, 0.10);
+  --shadow-lg: 0 20px 56px rgba(15, 23, 42, 0.12);
+  --shadow-glow-teal: 0 0 60px rgba(13, 148, 136, 0.07), 0 0 120px rgba(13, 148, 136, 0.03);
+  --shadow-glow-amber: 0 0 50px rgba(217, 119, 6, 0.06), 0 0 100px rgba(217, 119, 6, 0.03);
+  --shadow-inner-glow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
   /* ── Transitions ── */
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-out-back: cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -1035,7 +1035,7 @@ async function copyBotText(botMsg) {
   padding: 24px;
   position: relative;
   overflow: hidden;
-  background: linear-gradient(165deg, #070a14 0%, #0c1024 25%, #0a0f1f 50%, #0c1024 75%, #080d1c 100%);
+  background: linear-gradient(165deg, #f2f7fd 0%, #e9f3f1 25%, #f0f5fb 50%, #e8f0f9 75%, #f1f8f5 100%);
   background-size: 400% 400%;
   animation: bgShift 24s ease-in-out infinite;
 }
@@ -1067,7 +1067,7 @@ async function copyBotText(botMsg) {
 /* Teal orb — top left */
 .app-shell::after {
   width: 820px; height: 820px;
-  background: radial-gradient(circle, rgba(13, 148, 136, 0.18) 0%, rgba(20, 184, 166, 0.06) 35%, transparent 70%);
+  background: radial-gradient(circle, rgba(13, 148, 136, 0.10) 0%, rgba(20, 184, 166, 0.04) 35%, transparent 70%);
   top: -320px; left: -280px;
   animation: orb1 20s ease-in-out infinite;
 }
@@ -1079,7 +1079,7 @@ async function copyBotText(botMsg) {
   pointer-events: none;
   z-index: 0;
   width: 640px; height: 640px;
-  background: radial-gradient(circle, rgba(217, 119, 6, 0.13) 0%, rgba(245, 158, 11, 0.05) 40%, transparent 70%);
+  background: radial-gradient(circle, rgba(217, 119, 6, 0.09) 0%, rgba(245, 158, 11, 0.04) 40%, transparent 70%);
   bottom: -280px; right: -220px;
   animation: orb2 24s ease-in-out infinite;
 }
@@ -1129,7 +1129,7 @@ async function copyBotText(botMsg) {
   box-shadow: var(--shadow-glow-teal), var(--shadow-lg), var(--shadow-inner-glow);
 }
 .chat-card:hover {
-  border-color: rgba(45, 212, 191, 0.15);
+  border-color: rgba(13, 148, 136, 0.28);
 }
 .sidebar {
   display: flex;
@@ -1137,7 +1137,7 @@ async function copyBotText(botMsg) {
   box-shadow: var(--shadow-glow-amber), var(--shadow-lg), var(--shadow-inner-glow);
 }
 .sidebar:hover {
-  border-color: rgba(245, 158, 11, 0.15);
+  border-color: rgba(217, 119, 6, 0.28);
 }
 
 .chat-header,
@@ -1173,7 +1173,7 @@ async function copyBotText(botMsg) {
   font-size: 24px;
   line-height: 1.2;
   letter-spacing: -0.02em;
-  background: linear-gradient(135deg, #f0ede6 0%, var(--color-accent) 100%);
+  background: linear-gradient(135deg, #1f2937 0%, var(--color-accent) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -1181,7 +1181,7 @@ async function copyBotText(botMsg) {
 
 .sidebar-header h2 {
   font-size: 22px;
-  background: linear-gradient(135deg, #f0ede6 0%, var(--color-warm) 100%);
+  background: linear-gradient(135deg, #1f2937 0%, var(--color-warm) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -1280,7 +1280,7 @@ async function copyBotText(botMsg) {
   white-space: nowrap;
 }
 .clear-button:hover {
-  background: rgba(251, 113, 133, 0.10);
+  background: rgba(225, 29, 72, 0.07);
   border-color: var(--color-danger);
   color: var(--color-danger);
   transform: translateY(-1px);
@@ -1372,7 +1372,7 @@ async function copyBotText(botMsg) {
   position: absolute;
   top: 0; left: -100%;
   width: 100%; height: 100%;
-  background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.04) 50%, transparent 60%);
+  background: linear-gradient(105deg, transparent 40%, rgba(13, 148, 136, 0.06) 50%, transparent 60%);
   transition: left 0.5s ease;
   pointer-events: none;
   z-index: 2;
@@ -1383,7 +1383,7 @@ async function copyBotText(botMsg) {
 .turn-card:hover {
   background: var(--color-surface-hover);
   border-color: var(--color-border-strong);
-  box-shadow: var(--shadow-md), 0 0 40px rgba(45, 212, 191, 0.04);
+  box-shadow: var(--shadow-md), 0 0 40px rgba(13, 148, 136, 0.06);
   transform: translateY(-2px);
 }
 
@@ -1399,7 +1399,7 @@ async function copyBotText(botMsg) {
   display: inline-flex;
   align-items: center;
   padding: 4px 12px;
-  background: linear-gradient(135deg, var(--color-accent), #0d9488);
+  background: linear-gradient(135deg, #14b8a6, #0d9488);
   color: #ffffff;
   font-size: 12px;
   font-weight: 600;
@@ -1616,7 +1616,7 @@ async function copyBotText(botMsg) {
   position: absolute;
   top: -100px; left: 50%; transform: translateX(-50%);
   width: 350px; height: 350px;
-  background: radial-gradient(circle, rgba(45,212,191,0.08) 0%, rgba(45,212,191,0.02) 45%, transparent 70%);
+  background: radial-gradient(circle, rgba(13,148,136,0.09) 0%, rgba(13,148,136,0.03) 45%, transparent 70%);
   pointer-events: none;
 }
 .welcome-avatar-wrapper {
@@ -1640,13 +1640,13 @@ async function copyBotText(botMsg) {
   border: 3px solid var(--color-bg-mid);
   border-radius: 50%;
   animation: pulse 2s infinite;
-  box-shadow: 0 0 16px rgba(52, 211, 153, 0.4);
+  box-shadow: 0 0 16px rgba(5, 150, 105, 0.35);
 }
 .welcome-greeting {
   margin: 0 0 8px;
   font-size: 26px;
   font-weight: 700;
-  background: linear-gradient(135deg, #f0ede6, var(--color-accent));
+  background: linear-gradient(135deg, #1e293b, var(--color-accent));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -1665,7 +1665,7 @@ async function copyBotText(botMsg) {
 }
 .welcome-chip {
   padding: 10px 20px;
-  border: 1px solid rgba(45, 212, 191, 0.16);
+  border: 1px solid rgba(13, 148, 136, 0.25);
   border-radius: var(--radius-full);
   background: var(--color-accent-soft-bg);
   color: var(--color-accent);
@@ -1715,7 +1715,7 @@ async function copyBotText(botMsg) {
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid var(--color-success);
-  box-shadow: 0 0 12px rgba(52, 211, 153, 0.25);
+  box-shadow: 0 0 12px rgba(5, 150, 105, 0.2);
 }
 .typing-bubble {
   display: flex;
@@ -1768,27 +1768,27 @@ async function copyBotText(botMsg) {
 .status-warning {
   background: var(--color-warm-soft);
   color: var(--color-warm-strong);
-  border: 1px solid rgba(245, 158, 11, 0.25);
+  border: 1px solid rgba(217, 119, 6, 0.28);
 }
 .status-info {
   background: var(--color-info-soft);
   color: var(--color-info);
-  border: 1px solid rgba(56, 189, 248, 0.25);
+  border: 1px solid rgba(2, 132, 199, 0.25);
 }
 .status-success {
   background: var(--color-success-soft);
   color: var(--color-success);
-  border: 1px solid rgba(52, 211, 153, 0.25);
+  border: 1px solid rgba(5, 150, 105, 0.25);
 }
 .status-muted {
-  background: rgba(113, 111, 104, 0.12);
+  background: rgba(100, 116, 139, 0.10);
   color: var(--color-text-muted);
-  border: 1px solid rgba(113, 111, 104, 0.18);
+  border: 1px solid rgba(100, 116, 139, 0.2);
 }
 .status-danger {
   background: var(--color-danger-soft);
   color: var(--color-danger);
-  border: 1px solid rgba(251, 113, 133, 0.25);
+  border: 1px solid rgba(225, 29, 72, 0.25);
 }
 
 /* ── 商品图片（侧边栏） ────────────────────────────────────── */
@@ -1956,7 +1956,7 @@ async function copyBotText(botMsg) {
 }
 .sidebar-card:hover {
   background: var(--color-surface-hover);
-  border-color: rgba(245, 158, 11, 0.18);
+  border-color: rgba(217, 119, 6, 0.3);
   transform: translateY(-3px);
   box-shadow: var(--shadow-md), var(--shadow-glow-amber);
 }
@@ -2042,7 +2042,7 @@ async function copyBotText(botMsg) {
 }
 .suggestion-chip {
   padding: 6px 14px;
-  border: 1px solid rgba(45, 212, 191, 0.14);
+  border: 1px solid rgba(13, 148, 136, 0.22);
   border-radius: var(--radius-full);
   background: var(--color-accent-soft-bg);
   color: var(--color-accent);

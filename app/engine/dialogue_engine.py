@@ -5,6 +5,8 @@ from sqlalchemy.util import await_only
 
 from app.clarify.responder import ClarifyResponder
 from app.domain.messages import ProcessResult, BotMessage, UserMessage, MessageType
+from app.chitchat.handler import ChitChatHandler
+from app.knowledge.handler import KnowLedgeHandler
 from app.domain.state import DialogueState, Session
 from app.plan.turn_plan import TurnPlan, ClarifyReason
 from app.plan.turn_planner import TurnPlanner
@@ -14,7 +16,6 @@ from app.task.flow.models import FlowsList
 from app.task.flow.steps import CollectSlotStep
 from app.task.handler import TaskHandler
 
-
 # 消息处理引擎
 class DialogueEngine:
 
@@ -22,11 +23,15 @@ class DialogueEngine:
                  turn_planner:TurnPlanner,
                  turn_plan_validator:TurnPlanValidator,
                  task_handler:TaskHandler,
-                 clarify_responder:ClarifyResponder):
+                 clarify_responder:ClarifyResponder,
+                 chitchat_handler:ChitChatHandler,
+                 knowledge_handler:KnowLedgeHandler):
         self.turn_planner = turn_planner
         self.turn_plan_validator = turn_plan_validator
         self.task_handler = task_handler
         self.clarify_responder = clarify_responder
+        self.chitchat_handler = chitchat_handler
+        self.knowledge_handler = knowledge_handler
 
     # 负责处理一条消息：提出一个问题-到回复过程
     async def process_message(self,
@@ -37,6 +42,11 @@ class DialogueEngine:
 
         # 2 准备turn
         self._begin_turn(state, user_message)
+
+        # 2.1 消息携带对象时，更新聚焦对象
+        # （知识轨道对象校验、provider 检索都依赖 state.focused_object）
+        if user_message.object is not None:
+            state.set_focused_object(user_message.object)
 
         # 3 判断用户消息类型
         # 用户消息在 user_message里面，user_message有字段type，代表消息类型
@@ -108,8 +118,18 @@ class DialogueEngine:
             return await self.clarify_responder.respond(state,validated.reason)
 
         # todo 处理器包含： 任务流程、知识查询、闲聊、反问澄清
-        self.task_handler.handle(state,commands=turn_plan.task.commands)
-        pass
+        result: List[BotMessage] = []
+        if turn_plan.task is not None:
+            result = await self.task_handler.handle(state,commands=turn_plan.task.commands)
+
+        if turn_plan.knowledge is not None:
+            # 知识问答handler
+            result = await self.knowledge_handler.handler(state,turn_plan.knowledge.intents)
+        if turn_plan.chitchat is not None:
+            # 闲聊hanler
+            result = await self.chitchat_handler.handle(state)
+
+        return result
 
     # 处理对象类型消息
     async def handle_object_msg(self,state:DialogueState,
@@ -121,6 +141,10 @@ class DialogueEngine:
         # 2 如果 command，调用TaskHandler方法
         if commands:
             return await self.task_handler.handle(state,commands=commands)
+
+        #3 业务流程存在
+        if state.active_task is not None:
+            return await self.task_handler.handle(state, commands=[])
 
         return await self.clarify_responder.respond(
             state,reason=ClarifyReason.OBJECT_REQUIRES_INTENT)
@@ -143,13 +167,13 @@ class DialogueEngine:
             if self._is_setslot_data(state,flows,"order_number"):
                 # {"command": "set_slots", "slots": {"order_number": "10001"}}
                 return [SetSlotsCommand(command="set_slots",
-                                slots={"order_number",user_obj.id})]
+                                slots={"order_number": user_obj.id})]
             return []
         if object_type == "product":
             if self._is_setslot_data(state, flows, "product_id"):
                 # {"command": "set_slots", "slots": {"order_number": "10001"}}
                 return [SetSlotsCommand(command="set_slots",
-                                        slots={"product_id", user_obj.id})]
+                                        slots={"product_id": user_obj.id})]
             return []
 
     def _is_setslot_data(self,
@@ -164,6 +188,10 @@ class DialogueEngine:
         # 根据流程id获取flow对象
         flow = flows.get_flow_by_id(flow_id)
         if flow is None:
+            return False
+
+        # 4. 判断该流程中的上下文当前槽位是否已经填过
+        if active_task.slots.get(slot_name):
             return False
 
         for step in flow.steps:

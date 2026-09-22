@@ -1,16 +1,15 @@
-# This is a sample Python script.
+import uvicorn
 
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+from app.api.dependencies import get_dialogue_engine, init_dialogue_engine
+from app.config.config import settings
+from app.infrastructure.database import init_db_engin
+from app.infrastructure.http_client import init_http_client
+from app.task.action.builder import build_action_runner
 
-
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
-
-
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+if __name__=="__main__":
+    # init_db_engin()
+    # init_dialogue_engine()
+    # init_http_client()
+    uvicorn.run("app.api.app:app",
+                host=settings.app_host,
+                port=settings.app_port)

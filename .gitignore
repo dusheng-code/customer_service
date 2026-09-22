@@ -1,4 +1,16 @@
 ### Python template
+
+# Node / 前端依赖
+node_modules/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# 环境密钥文件
+.env
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

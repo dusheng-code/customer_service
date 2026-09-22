@@ -24,7 +24,7 @@ class LogisticsAction(Action):
                 slot_updates={
                     "logistics_company":"未知",
                     "tracking_number":"未知",
-                    "status":"暂无物流信息"
+                    "logistics_status": "暂无物流信息"
                 }
             )
         #调用
@@ -35,13 +35,13 @@ class LogisticsAction(Action):
                 slot_updates={
                     "logistics_company":"未知",
                     "tracking_number":"未知",
-                    "status":"暂无物流消息"
+                    "logistics_status": "暂无物流信息"
                 }
             )
         return ActionResult(
             slot_updates={
                 "logistics_company":logistics_data.get("logistics_company"),
                 "tracking_number":logistics_data.get("tracking_number"),
-                "status":logistics_data.get("status")
+                "logistics_status": logistics_data.get("status")
             }
         )

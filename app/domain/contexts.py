@@ -16,9 +16,12 @@ class TaskContext:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "TaskContext":
-        return cls(
-            flow_id=data["flow_id"], step_id=data["step_id"], slots=data["slots"]
-        )
+        if data:
+            return cls(
+                flow_id=data["flow_id"], step_id=data["step_id"], slots=data["slots"]
+            )
+        else:
+            return None
 
 @dataclass
 class SystemContext:

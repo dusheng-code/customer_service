@@ -28,7 +28,9 @@ class ClarifyResponder:
         history_str = HistoryBuilder.build(state.current_session().turns[-10:])
 
         # focused_object
-        focused_object_str = json.dumps(state.focused_object.to_dict(), ensure_ascii=False)
+        focused_object_str = json.dumps(state.focused_object.to_dict() if state.focused_object is not None else None, ensure_ascii=False)
+
+        user_message_str = json.dumps(state.pending_turn.user_message.to_dict(), ensure_ascii=False)
 
         # 2 加载提示词模版
         prompt_text = load_prompt("clarify_respond")
@@ -43,7 +45,8 @@ class ClarifyResponder:
                 "history":history_str,
                 "focused_object":focused_object_str,
                 "clarify_message":clarify_message,
-                "reason":reason.value
+                "reason":reason.value,
+                "user_message":user_message_str
             }
         )
         return [BotMessage(text=result)]
